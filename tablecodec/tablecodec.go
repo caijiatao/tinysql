@@ -98,7 +98,31 @@ func DecodeRecordKey(key kv.Key) (tableID int64, handle int64, err error) {
 	 *   5. understanding the coding rules is a prerequisite for implementing this function,
 	 *      you can learn it in the projection 1-2 course documentation.
 	 */
+
+	err = checkKey(key)
+	if err != nil {
+		return 0, 0, err
+	}
+	prefix := key[tablePrefixLength:prefixLen]
+	_, tableID, err = codec.DecodeInt(prefix)
+	if err != nil {
+		return
+	}
+	recordKey := key[prefixLen:RecordRowKeyLen]
+	_, handle, err = codec.DecodeInt(recordKey)
+	if err != nil {
+		return
+	}
+
 	return
+}
+
+func checkKey(key kv.Key) error {
+	if !key.HasPrefix(tablePrefix) {
+		return errors.New("key err")
+	}
+
+	return nil
 }
 
 // appendTableIndexPrefix appends table index prefix  "t[tableID]_i".
@@ -148,6 +172,20 @@ func DecodeIndexKeyPrefix(key kv.Key) (tableID int64, indexID int64, indexValues
 	 *   5. understanding the coding rules is a prerequisite for implementing this function,
 	 *      you can learn it in the projection 1-2 course documentation.
 	 */
+	err = checkKey(key)
+	if err != nil {
+		return
+	}
+	_, tableID, err = codec.DecodeInt(key[tablePrefixLength:prefixLen])
+	if err != nil {
+		return
+	}
+	index := key[TableSplitKeyLen+recordPrefixSepLength:]
+	_, indexID, err = codec.DecodeInt(index)
+	if err != nil {
+		return
+	}
+	indexValues = key[RecordRowKeyLen:]
 	return tableID, indexID, indexValues, nil
 }
 
